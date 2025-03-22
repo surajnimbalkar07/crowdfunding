@@ -6,6 +6,8 @@ import { ethers } from 'ethers';
 const { ethereum } = window;
 const contractAddress = address.address;
 const contractAbi = abi.abi;
+const POLYGON_AMOY_CHAIN_ID = '0x13882'; // 80002 in hex format
+
 let tx;
 
 // Connect the user's wallet
@@ -13,10 +15,28 @@ const connectWallet = async () => {
   try {
     if (!ethereum) throw new Error('Please install Metamask');
     const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+
+    await switchToPolygonAmoy();
     setGlobalState('connectedAccount', accounts[0]?.toLowerCase());
-    alert('Successfully connected');
+    alert('Successfully connected to Polygon Amoy');
   } catch (error) {
     reportError(error);
+  }
+};
+
+// Ensure the user is connected to Polygon Amoy
+const switchToPolygonAmoy = async () => {
+  try {
+    const chainId = await ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== POLYGON_AMOY_CHAIN_ID) {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: POLYGON_AMOY_CHAIN_ID }],
+      });
+    }
+  } catch (error) {
+    console.error('Error switching to Polygon Amoy:', error);
+    throw new Error('Please switch to the Polygon Amoy Testnet in Metamask');
   }
 };
 
@@ -25,16 +45,12 @@ const isWalletConnected = async () => {
   try {
     if (!ethereum) throw new Error('Please install Metamask');
     const accounts = await ethereum.request({ method: 'eth_accounts' });
+
+    await switchToPolygonAmoy();
     setGlobalState('connectedAccount', accounts[0]?.toLowerCase());
 
-    // Handle chain or account changes
-    ethereum.on('chainChanged', () => {
-      window.location.reload();
-    });
-
-    ethereum.on('accountsChanged', async () => {
-      await isWalletConnected();
-    });
+    ethereum.on('chainChanged', () => window.location.reload());
+    ethereum.on('accountsChanged', async () => await isWalletConnected());
 
     if (accounts.length) {
       setGlobalState('connectedAccount', accounts[0]?.toLowerCase());
@@ -46,10 +62,9 @@ const isWalletConnected = async () => {
   }
 };
 
-// Get the Ethereum contract instance
+// Get the Ethereum contract instance with Polygon Amoy provider
 const getEthereumContract = async () => {
   const connectedAccount = getGlobalState('connectedAccount');
-
   if (connectedAccount) {
     const provider = new ethers.providers.Web3Provider(ethereum);
     const signer = provider.getSigner();
@@ -131,6 +146,7 @@ const loadProject = async (id) => {
 const backProject = async (id, amount) => {
   try {
     if (!ethereum) throw new Error('Please install Metamask');
+    await switchToPolygonAmoy();
     const connectedAccount = getGlobalState('connectedAccount');
     const contract = await getEthereumContract();
     const parsedAmount = ethers.utils.parseEther(amount);
@@ -164,6 +180,7 @@ const getBackers = async (id) => {
 const payoutProject = async (id) => {
   try {
     if (!ethereum) throw new Error('Please install Metamask');
+    await switchToPolygonAmoy();
     const connectedAccount = getGlobalState('connectedAccount');
     const contract = await getEthereumContract();
 
@@ -202,10 +219,7 @@ const structuredProjects = (projects) =>
 
 const toDate = (timestamp) => {
   const date = new Date(timestamp);
-  const dd = String(date.getDate()).padStart(2, '0');
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const yyyy = date.getFullYear();
-  return `${yyyy}-${mm}-${dd}`;
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 };
 
 const structureStats = (stats) => ({
