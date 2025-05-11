@@ -84,6 +84,7 @@ const createProject = async ({ title, description, imageURL, cost, expiresAt }) 
     await tx.wait();
     await loadProjects();
   } catch (error) {
+    console.error("Smart contract error:", error);
     reportError(error);
   }
 };

@@ -24,11 +24,12 @@ const CreateProject = () => {
     const params = {
       title,
       description,
+      
       cost,
       expiresAt: toTimestamp(date),
       imageURL,
     }
-
+    console.log(params)
     await createProject(params)
     toast.success('Project created successfully, will reflect in 30sec.')
     onClose()
